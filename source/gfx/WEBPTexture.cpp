@@ -52,7 +52,7 @@ GX2Texture *WEBP_LoadTexture(std::span<uint8_t> data) {
     }
 
     if (!WebPDecodeRGBAInto(data.data(), data.size(),
-                            reinterpret_cast<uint8_t*>(texture->surface.image),
+                            reinterpret_cast<uint8_t *>(texture->surface.image),
                             texture->surface.imageSize,
                             texture->surface.pitch * 4)) {
         DEBUG_FUNCTION_LINE_ERR("Failed to decode WEBP image\n");
