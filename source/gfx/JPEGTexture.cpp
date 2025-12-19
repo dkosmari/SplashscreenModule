@@ -20,7 +20,7 @@ GX2Texture *JPEG_LoadTexture(std::span<uint8_t> data) {
         goto error;
     }
 
-    width = tj3Get(handle, TJPARAM_JPEGWIDTH);
+    width  = tj3Get(handle, TJPARAM_JPEGWIDTH);
     height = tj3Get(handle, TJPARAM_JPEGHEIGHT);
     if (width == -1 || height == -1) {
         DEBUG_FUNCTION_LINE_ERR("Unknown JPEG image size\n");
