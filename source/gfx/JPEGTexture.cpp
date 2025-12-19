@@ -65,10 +65,10 @@ GX2Texture *JPEG_LoadTexture(std::span<uint8_t> data) {
     }
 
     if (tj3Decompress8(handle,
-                      data.data(), data.size(),
-                      static_cast<unsigned char *>(texture->surface.image),
-                      texture->surface.pitch * 4,
-                      TJPF_RGBA)) {
+                       data.data(), data.size(),
+                       static_cast<unsigned char *>(texture->surface.image),
+                       texture->surface.pitch * 4,
+                       TJPF_RGBA)) {
         DEBUG_FUNCTION_LINE_ERR("Failed to read JPEG image: %s\n", tj3GetErrorStr(handle));
         goto error;
     }
