@@ -11,7 +11,9 @@
 
 class SplashScreenDrawer {
 public:
-    explicit SplashScreenDrawer(const std::filesystem::path &meta_dir);
+
+    SplashScreenDrawer();
+    explicit SplashScreenDrawer(const std::filesystem::path &baseDir);
 
     void Draw();
 
@@ -47,4 +49,6 @@ private:
     GX2RBuffer mTexCoordBuffer = {};
     GX2Texture *mTexture       = nullptr;
     GX2Sampler mSampler        = {};
+
+    void InitResources();
 };
