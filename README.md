@@ -5,18 +5,25 @@ other modules of the environment are loading.
 
 ## Usage
 Place the `01_splashscreen.rpx` in the `[ENVIRONMENT]/modules/setup` folder and run the
-EnvironmentLoader. The module will attempt to load the splash image, in this order:
-  1. `[ENVIRONMENT]/splash.png`
-  2. `[ENVIRONMENT]/splash.jpg` or `[ENVIRONMENT]/splash.jpeg`
-  3. `[ENVIRONMENT]/splash.tga`
-  4. A random image (PNG, JPEG or TGA) from the directory `[ENVIRONMENT]/splashes/`.
+EnvironmentLoader.
 
-If no splash image is found on the sd card, this module will effectively do nothing.
+Place your splash images in the folder `SD:/wiiu/splashes/`. One of them will be randomly
+loaded during boot.
 
 **Notes:**
-  - `[ENVIRONMENT]` is the directory of the environment, for Aroma with would be `sd:/wiiu/enviroments/aroma/splash.png`
-  - When using a `tga` make sure its 24 bit and uncompressed
-  - In theory any (reasonable) resolution is supported, something like 1280x720 is recommended
+  - `[ENVIRONMENT]` is the directory of the environment, for Aroma with would be `SD:/wiiu/enviroments/aroma`.
+  - When using a `tga` image, make sure its 24 bit and uncompressed,
+  - In theory any (reasonable) resolution is supported, something like 1280x720 is recommended.
+
+## Path priority
+The module will attempt to load a splash image from multiple places, in this order:
+  1. `[ENVIRONMENT]/splash.{png,jpg,jpeg,tga}`
+  2. `[ENVIRONMENT]/splashes/*.{png,jpg,jpeg,tga}`
+  3. `SD:/wiiu/splash.{png,jpg,jpeg,tga}`
+  4. `SD:/wiiu/splashes/*.{png,jpg,jpeg,tga}`
+
+You should use the last path (`SD:/wiiu/splashes/`), and leave the others for when you
+want to override the splash.
 
 ## Buildflags
 
