@@ -5,7 +5,7 @@ other modules of the environment are loading.
 
 ## Usage
   1. Place the `01_splashscreen.rpx` in the `[ENVIRONMENT]/modules/setup` folder.
-  2. Place your splash images (PNG, TGA, JPEG)) in the folder `SD:/wiiu/splashes/`.
+  2. Place your splash images (PNG, TGA or JPEG) in the folder `SD:/wiiu/splashes/`.
 
 **Notes:**
   - `[ENVIRONMENT]` is the directory of the environment, for Aroma with would be `SD:/wiiu/enviroments/aroma`.
