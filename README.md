@@ -4,11 +4,10 @@ This module is supposed to be loaded with the [EnvironmentLoader](https://github
 other modules of the environment are loading.
 
 ## Usage
-Place the `01_splashscreen.rpx` in the `[ENVIRONMENT]/modules/setup` folder and run the
-EnvironmentLoader.
-
-Place your splash images in the folder `SD:/wiiu/splashes/`. One of them will be randomly
-loaded during boot.
+  1. Place the `01_splashscreen.rpx` in the `[ENVIRONMENT]/modules/setup` folder and run
+     the EnvironmentLoader.
+  2. Place your splash images in the folder `SD:/wiiu/splashes/`. One of them will be randomly
+     loaded during boot.
 
 **Notes:**
   - `[ENVIRONMENT]` is the directory of the environment, for Aroma with would be `SD:/wiiu/enviroments/aroma`.
