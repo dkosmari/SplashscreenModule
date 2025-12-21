@@ -12,6 +12,7 @@
 #include <gx2/draw.h>
 #include <gx2/mem.h>
 #include <gx2r/draw.h>
+#include <optional>
 #include <random>
 #include <whb/log.h>
 
@@ -147,6 +148,18 @@ SplashScreenDrawer::SplashScreenDrawer() {
     InitResources();
 }
 
+static std::size_t get_random_index(std::size_t size) {
+    static std::optional<std::minstd_rand> engine;
+    if (!engine) {
+        auto t = static_cast<std::uint64_t>(OSGetTime());
+        std::seed_seq seeder{static_cast<std::uint32_t>(t),
+                             static_cast<std::uint32_t>(t >> 32)};
+        engine.emplace(seeder);
+    }
+    std::uniform_int_distribution<std::size_t> dist{0, size - 1};
+    return dist(*engine);
+}
+
 SplashScreenDrawer::SplashScreenDrawer(const std::filesystem::path &splash_base_path) {
     if (splash_base_path.empty())
         throw std::runtime_error{"empty base dir"};
@@ -173,12 +186,7 @@ SplashScreenDrawer::SplashScreenDrawer(const std::filesystem::path &splash_base_
             }
         }
         if (!candidates.empty()) {
-            auto t = static_cast<std::uint64_t>(OSGetTime());
-            std::seed_seq seed{static_cast<std::uint32_t>(t),
-                               static_cast<std::uint32_t>(t >> 32)};
-            std::minstd_rand eng{seed};
-            std::uniform_int_distribution<std::size_t> dist{0, candidates.size() - 1};
-            auto selected = dist(eng);
+            auto selected = get_random_index(candidates.size());
             mTexture      = LoadImageAsTexture(candidates[selected]);
         }
     }
