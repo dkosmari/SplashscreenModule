@@ -142,8 +142,7 @@ static GX2Texture *LoadImageAsTexture(const std::filesystem::path &filename) {
     return nullptr;
 }
 
-SplashScreenDrawer::SplashScreenDrawer()
-{
+SplashScreenDrawer::SplashScreenDrawer() {
     mTexture = PNG_LoadTexture(empty_png);
     InitResources();
 }

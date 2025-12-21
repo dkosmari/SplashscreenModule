@@ -11,7 +11,6 @@
 
 class SplashScreenDrawer {
 public:
-
     SplashScreenDrawer();
     explicit SplashScreenDrawer(const std::filesystem::path &baseDir);
 
