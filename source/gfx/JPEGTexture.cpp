@@ -7,21 +7,23 @@
 
 GX2Texture *JPEG_LoadTexture(std::span<uint8_t> data) {
     GX2Texture *texture = nullptr;
-
-    tjhandle handle = tjInitDecompress();
-    if (!handle) {
-        return nullptr;
-    }
-
     int height;
     int width;
-    int subsamp;
-    int colorspace;
-    if (tjDecompressHeader3(handle,
-                            data.data(), data.size(),
-                            &width, &height,
-                            &subsamp, &colorspace)) {
-        DEBUG_FUNCTION_LINE_ERR("Failed to parse JPEG header\n");
+
+    tjhandle handle = tj3Init(TJINIT_DECOMPRESS);
+    if (!handle) {
+        goto error;
+    }
+
+    if (tj3DecompressHeader(handle, data.data(), data.size())) {
+        DEBUG_FUNCTION_LINE_ERR("Failed to parse JPEG header: %s\n", tj3GetErrorStr(handle));
+        goto error;
+    }
+
+    width  = tj3Get(handle, TJPARAM_JPEGWIDTH);
+    height = tj3Get(handle, TJPARAM_JPEGHEIGHT);
+    if (width == -1 || height == -1) {
+        DEBUG_FUNCTION_LINE_ERR("Unknown JPEG image size\n");
         goto error;
     }
 
@@ -62,19 +64,16 @@ GX2Texture *JPEG_LoadTexture(std::span<uint8_t> data) {
         goto error;
     }
 
-    if (tjDecompress2(handle,
-                      data.data(), data.size(),
-                      static_cast<unsigned char *>(texture->surface.image),
-                      width,
-                      texture->surface.pitch * 4,
-                      height,
-                      TJPF_RGBA,
-                      0)) {
-        DEBUG_FUNCTION_LINE_ERR("Failed to read JPEG image\n");
+    if (tj3Decompress8(handle,
+                       data.data(), data.size(),
+                       static_cast<unsigned char *>(texture->surface.image),
+                       texture->surface.pitch * 4,
+                       TJPF_RGBA)) {
+        DEBUG_FUNCTION_LINE_ERR("Failed to read JPEG image: %s\n", tj3GetErrorStr(handle));
         goto error;
     }
 
-    tjDestroy(handle);
+    tj3Destroy(handle);
 
     GX2Invalidate(GX2_INVALIDATE_MODE_CPU | GX2_INVALIDATE_MODE_TEXTURE,
                   texture->surface.image, texture->surface.imageSize);
@@ -86,6 +85,6 @@ error:
         std::free(texture->surface.image);
     }
     std::free(texture);
-    tjDestroy(handle);
+    tj3Destroy(handle);
     return nullptr;
 }
