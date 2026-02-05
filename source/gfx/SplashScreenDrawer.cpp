@@ -3,6 +3,7 @@
 #include "PNGTexture.h"
 #include "ShaderSerializer.h"
 #include "TGATexture.h"
+#include "WEBPTexture.h"
 #include "gfx.h"
 #include "utils/logger.h"
 #include "utils/utils.h"
@@ -137,6 +138,8 @@ static GX2Texture *LoadImageAsTexture(const std::filesystem::path &filename) {
             return JPEG_LoadTexture(buffer);
         } else if (ext == ".tga") {
             return TGA_LoadTexture(buffer);
+        } else if (ext == ".webp") {
+            return WEBP_LoadTexture(buffer);
         }
     }
     return nullptr;
@@ -154,6 +157,9 @@ SplashScreenDrawer::SplashScreenDrawer(const std::filesystem::path &splash_base_
         mTexture = LoadImageAsTexture(splash_base_path / "splash.tga");
     }
     if (!mTexture) {
+        mTexture = LoadImageAsTexture(splash_base_path / "splash.webp");
+    }
+    if (!mTexture) {
         // try to load a random one from "splashes/*"
         try {
             std::vector<std::filesystem::path> candidates;
@@ -162,7 +168,11 @@ SplashScreenDrawer::SplashScreenDrawer(const std::filesystem::path &splash_base_
                     continue;
                 }
                 auto ext = ToLower(entry.path().extension());
-                if (ext == ".png" || ext == ".tga" || ext == ".jpg" || ext == ".jpeg") {
+                if (ext == ".png" ||
+                    ext == ".tga" ||
+                    ext == ".jpg" ||
+                    ext == ".jpeg" ||
+                    ext == ".webp") {
                     candidates.push_back(entry.path());
                 }
             }
