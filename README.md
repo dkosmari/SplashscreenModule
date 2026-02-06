@@ -4,19 +4,22 @@ This module is supposed to be loaded with the [EnvironmentLoader](https://github
 other modules of the environment are loading.
 
 ## Usage
-Place the `01_splashscreen.rpx` in the `[ENVIRONMENT]/modules/setup` folder and run the
-EnvironmentLoader. The module will attempt to load the splash image, in this order:
-  1. `[ENVIRONMENT]/splash.png`
-  2. `[ENVIRONMENT]/splash.jpg` or `[ENVIRONMENT]/splash.jpeg`
-  3. `[ENVIRONMENT]/splash.tga`
-  4. A random image (PNG, JPEG or TGA) from the directory `[ENVIRONMENT]/splashes/`.
-
-If no splash image is found on the sd card, this module will effectively do nothing.
+  1. Place the `01_splashscreen.rpx` in the `[ENVIRONMENT]/modules/setup` folder.
+  2. Place your splash images (PNG, JPEG, TGA or WEBP) in the folder `SD:/wiiu/splashes/`.
 
 **Notes:**
-  - `[ENVIRONMENT]` is the directory of the environment, for Aroma with would be `sd:/wiiu/enviroments/aroma/splash.png`
-  - When using a `tga` make sure its 24 bit and uncompressed
-  - In theory any (reasonable) resolution is supported, something like 1280x720 is recommended
+  - `[ENVIRONMENT]` is the directory of the environment, for Aroma with would be `SD:/wiiu/enviroments/aroma`.
+  - When using a TGA image, make sure its 24 bit and uncompressed,
+  - In theory any (reasonable) resolution is supported, **1280x720** is recommended for best quality on both gamepad and TV screens.
+
+## Path priority
+The module will attempt to load a splash image from multiple places, in this order:
+  1. `[ENVIRONMENT]/`: an image named `splash.EXT`
+  2. `[ENVIRONMENT]/splashes/`: a **random** image in that folder.
+  3. `SD:/wiiu/`: an image named `splash.EXT`
+  4. `SD:/wiiu/splashes/`: a **random** image in that folder.
+
+Where `EXT` can be `png`, `jpg`, `jpeg`, `tga` or `webp`.
 
 ## Buildflags
 
@@ -32,8 +35,9 @@ If the [LoggingModule](https://github.com/wiiu-env/LoggingModule) is not present
 ## Building
 For building, you need to install (via devkitPro's `pacman`):
   - [wut](https://github.com/devkitPro/wut/)
-  - ppc-libpng
   - ppc-libjpeg-turbo
+  - ppc-libpng
+  - ppc-libwebp
 
 Then use the `make` command.
 
