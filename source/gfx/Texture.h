@@ -7,7 +7,7 @@
 class Texture {
 public:
     // allow moving
-    Texture(Texture &&other) noexcept            = default;
+    Texture(Texture &&other) noexcept = default;
     Texture &operator=(Texture &&other) noexcept = default;
 
     Texture() noexcept = default;
