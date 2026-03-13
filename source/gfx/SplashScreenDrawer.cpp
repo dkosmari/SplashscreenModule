@@ -10,13 +10,23 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <chrono>
+#include <coreinit/cache.h>
+#include <coreinit/memfrmheap.h>
+#include <coreinit/memheap.h>
+#include <coreinit/memory.h>
+#include <coreinit/screen.h>
 #include <cstdlib>
 #include <exception>
+#include <expected>
 #include <gx2/draw.h>
 #include <gx2/mem.h>
 #include <gx2r/draw.h>
 #include <string>
+#include <thread>
 #include <whb/log.h>
+
+using namespace std::literals;
 
 /*
 constexpr const char *s_textureVertexShader = R"(
@@ -122,7 +132,56 @@ uint8_t empty_png[119] = {
         0x0C, 0x0C, 0x00, 0x00, 0x0E, 0x00, 0x01, 0x7A, 0xB1, 0xB9, 0x30, 0x00,
         0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82};
 
-static GX2Texture *LoadImageAsTexture(const std::filesystem::path &filename) {
+static void reportError(const std::string &msg) {
+    OSScreenInit();
+    auto tvSize  = OSScreenGetBufferSizeEx(SCREEN_TV);
+    auto drcSize = OSScreenGetBufferSizeEx(SCREEN_DRC);
+
+    const auto tag = 0x000DECAF;
+    auto heap      = MEMGetBaseHeapHandle(MEM_BASE_HEAP_MEM1);
+    MEMRecordStateForFrmHeap(heap, tag);
+
+    auto tvBuffer  = MEMAllocFromFrmHeapEx(heap, tvSize, 4);
+    auto drcBuffer = MEMAllocFromFrmHeapEx(heap, drcSize, 4);
+
+    OSScreenSetBufferEx(SCREEN_TV, tvBuffer);
+    OSScreenSetBufferEx(SCREEN_DRC, drcBuffer);
+
+    OSScreenEnableEx(SCREEN_TV, true);
+    OSScreenEnableEx(SCREEN_DRC, true);
+
+    OSScreenClearBufferEx(SCREEN_TV, 0x80'00'00'ff);
+    OSScreenClearBufferEx(SCREEN_DRC, 0x80'00'00'ff);
+
+    // break down the message if too long
+    const std::string::size_type max_line_length = 60;
+    if (msg.size() > max_line_length) {
+        int y = 0;
+        for (std::string::size_type i = 0; i < msg.size(); i += max_line_length, ++y) {
+            auto fragment = msg.substr(i, max_line_length);
+            OSScreenPutFontEx(SCREEN_TV, 0, y, fragment.c_str());
+            OSScreenPutFontEx(SCREEN_DRC, 0, y, fragment.c_str());
+        }
+    } else {
+        OSScreenPutFontEx(SCREEN_TV, 0, 0, msg.c_str());
+        OSScreenPutFontEx(SCREEN_DRC, 0, 0, msg.c_str());
+    }
+
+    DCFlushRange(tvBuffer, tvSize);
+    DCFlushRange(drcBuffer, drcSize);
+    OSScreenFlipBuffersEx(SCREEN_TV);
+    OSScreenFlipBuffersEx(SCREEN_DRC);
+
+    std::this_thread::sleep_for(15s);
+
+    OSScreenEnableEx(SCREEN_TV, false);
+    OSScreenEnableEx(SCREEN_DRC, false);
+
+    OSScreenShutdown();
+    MEMFreeByStateToFrmHeap(heap, tag);
+}
+
+static std::expected<Texture, std::string> LoadImageAsTexture(const std::filesystem::path &filename) {
     std::vector<uint8_t> buffer;
     if (LoadFileIntoBuffer(filename, buffer)) {
         auto ext = ToLower(filename.extension());
@@ -134,9 +193,10 @@ static GX2Texture *LoadImageAsTexture(const std::filesystem::path &filename) {
             return TGA_LoadTexture(buffer);
         } else if (ext == ".webp") {
             return WEBP_LoadTexture(buffer);
-        }
-    }
-    return nullptr;
+        } else
+            return std::unexpected{"Unknown file extension: "s + ext.string()};
+    } else
+        return std::unexpected{"Unable to read file: "s + filename.string() + "\""s};
 }
 
 SplashScreenDrawer::SplashScreenDrawer(const std::filesystem::path &envDir) {
@@ -145,7 +205,15 @@ SplashScreenDrawer::SplashScreenDrawer(const std::filesystem::path &envDir) {
         // 2: Use general dir.
         if (!LoadTextureFrom("fs:/vol/external01/wiiu")) {
             // 3: Use fallback empty texture.
-            mTexture = PNG_LoadTexture(empty_png);
+            auto tex = PNG_LoadTexture(empty_png);
+            if (tex) {
+                mTexture = std::move(*tex);
+            } else {
+                // should never fail to load fallback texture, something is broken
+                DEBUG_FUNCTION_LINE_ERR("Could not load fallback texture: %s",
+                                        tex.error().c_str());
+                abort();
+            }
         }
     }
 
@@ -205,17 +273,30 @@ bool SplashScreenDrawer::LoadTextureFrom(const std::filesystem::path &dir) {
 
     // First try the splash.* image.
     for (const auto &ext : extensions) {
-        auto fname = std::string{"splash"} + ext;
-        mTexture   = LoadImageAsTexture(dir / fname);
-        if (mTexture) {
+        auto filename = dir / ("splash"s + ext);
+        if (!exists(filename))
+            continue;
+        auto tex = LoadImageAsTexture(filename);
+        if (tex) {
+            mTexture = std::move(*tex);
+            return true;
+        } else {
+            DEBUG_FUNCTION_LINE_ERR("Failed to load texture \"%s\": %s\n",
+                                    filename.c_str(),
+                                    tex.error().c_str());
+            reportError("Failed to load texture \"" + filename.string() + "\": " + tex.error());
             return true;
         }
     }
 
+    // Second attempt, the "splashes" directory.
     try {
+        auto search_dir = dir / "splashes";
+        if (!exists(search_dir))
+            return false;
         // Make a list of all candidates in splashes/* to select one at random.
         std::vector<std::filesystem::path> candidates;
-        for (const auto &entry : std::filesystem::directory_iterator{dir / "splashes"}) {
+        for (const auto &entry : std::filesystem::directory_iterator{search_dir}) {
             if (!entry.is_regular_file()) {
                 continue;
             }
@@ -226,13 +307,23 @@ bool SplashScreenDrawer::LoadTextureFrom(const std::filesystem::path &dir) {
         }
         if (!candidates.empty()) {
             auto selected = GetRandomIndex(candidates.size());
-            mTexture      = LoadImageAsTexture(candidates[selected]);
-            if (mTexture) {
+            auto filename = candidates[selected];
+            auto tex      = LoadImageAsTexture(filename);
+            if (tex) {
+                mTexture = std::move(*tex);
+                return true;
+            } else {
+                DEBUG_FUNCTION_LINE_ERR("Failed to load texture \"%s\": %s\n",
+                                        filename.c_str(),
+                                        tex.error().c_str());
+                reportError("Failed to load texture \"" + filename.string() + "\": " + tex.error());
                 return true;
             }
         }
     } catch (std::exception &e) {
-        DEBUG_FUNCTION_LINE_INFO("Loading texture failed: %s", e.what());
+        DEBUG_FUNCTION_LINE_ERR("Loading texture failed: %s", e.what());
+        reportError(e.what());
+        return true; // stop trying to load a texture after this
     }
     return false;
 }
@@ -253,7 +344,7 @@ void SplashScreenDrawer::Draw() {
 
     GX2RSetAttributeBuffer(&mPositionBuffer, 0, mPositionBuffer.elemSize, 0);
     GX2RSetAttributeBuffer(&mTexCoordBuffer, 1, mTexCoordBuffer.elemSize, 0);
-    GX2SetPixelTexture(mTexture, mShaderGroup.pixelShader->samplerVars[0].location);
+    GX2SetPixelTexture(mTexture.get(), mShaderGroup.pixelShader->samplerVars[0].location);
     GX2SetPixelSampler(&mSampler, mShaderGroup.pixelShader->samplerVars[0].location);
 
     GX2DrawEx(GX2_PRIMITIVE_MODE_QUADS, 4, 0, 1);
@@ -264,12 +355,4 @@ void SplashScreenDrawer::Draw() {
 SplashScreenDrawer::~SplashScreenDrawer() {
     GX2RDestroyBufferEx(&mPositionBuffer, GX2R_RESOURCE_BIND_NONE);
     GX2RDestroyBufferEx(&mTexCoordBuffer, GX2R_RESOURCE_BIND_NONE);
-    if (mTexture) {
-        if (mTexture->surface.image != nullptr) {
-            std::free(mTexture->surface.image);
-            mTexture->surface.image = nullptr;
-        }
-        std::free(mTexture);
-        mTexture = nullptr;
-    }
 }

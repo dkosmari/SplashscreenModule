@@ -1,11 +1,11 @@
 #pragma once
 
 #include "ShaderSerializer.h"
+#include "Texture.h"
 #include "gfx.h"
 #include <filesystem>
 #include <gx2/sampler.h>
 #include <gx2/shaders.h>
-#include <gx2/texture.h>
 #include <gx2r/buffer.h>
 #include <memory>
 
@@ -45,8 +45,8 @@ private:
     std::unique_ptr<GX2PixelShaderWrapper> mPixelShaderWrapper;
     GX2RBuffer mPositionBuffer = {};
     GX2RBuffer mTexCoordBuffer = {};
-    GX2Texture *mTexture       = nullptr;
-    GX2Sampler mSampler        = {};
+    Texture mTexture;
+    GX2Sampler mSampler = {};
 
     void InitResources();
 
