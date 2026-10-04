@@ -1,7 +1,9 @@
 #pragma once
 
-#include <cstdint>
-#include <gx2/texture.h>
+#include "Texture.h"
+#include <cstddef>
+#include <expected>
 #include <span>
+#include <string>
 
-GX2Texture *JPEG_LoadTexture(std::span<uint8_t> data);
+std::expected<Texture, std::string> JPEG_LoadTexture(std::span<const std::byte> data) noexcept;

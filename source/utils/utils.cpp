@@ -6,33 +6,34 @@
 #include <random>
 #include <stdexcept>
 #include <string>
-#include <sys/stat.h>
+#include <utility>
 #include <vector>
 
-bool LoadFileIntoBuffer(const std::filesystem::path &filename, std::vector<uint8_t> &buffer) {
-    struct stat st {};
-    if (stat(filename.c_str(), &st) < 0 || !S_ISREG(st.st_mode)) {
-        DEBUG_FUNCTION_LINE_INFO("\"%s\" doesn't exists", filename.c_str());
-        return false;
-    }
+using namespace std::literals;
 
-    FILE *f = fopen(filename.c_str(), "rb");
-    if (!f) {
-        return false;
-    }
+std::expected<std::vector<std::byte>, std::string> LoadFile(const std::filesystem::path &filename) noexcept {
     try {
-        buffer.resize(st.st_size);
-    } catch (std::bad_alloc &e) {
-        DEBUG_FUNCTION_LINE_WARN("Failed allocate memory for %s: %s", filename.c_str(), e.what());
-    }
+        if (!exists(filename)) {
+            return std::unexpected{filename.string() + " does not exist."s};
+        }
+        auto size = file_size(filename);
+        std::vector<std::byte> buffer(size);
 
-    if (fread(buffer.data(), 1, st.st_size, f) != st.st_size) {
-        DEBUG_FUNCTION_LINE_WARN("Failed load %s", filename.c_str());
-        fclose(f);
-        return false;
+        FILE *f = std::fopen(filename.c_str(), "rb");
+        if (!f) {
+            return std::unexpected{"Could not open "s + filename.string()};
+        }
+
+        auto read = std::fread(buffer.data(), 1, size, f);
+        std::fclose(f);
+        if (read < size) {
+            return std::unexpected{"Could not read the whole file."};
+        }
+
+        return {std::move(buffer)};
+    } catch (std::exception &e) {
+        return std::unexpected{"Could not load file: "s + e.what()};
     }
-    fclose(f);
-    return true;
 }
 
 namespace {
